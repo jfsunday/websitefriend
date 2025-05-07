@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Verschlüsselungskette</title>
+
+  <!-- Material Design Lite -->
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+  <!-- CryptoJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/jooty/blowfish@master/blowfish.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Roboto", sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #ffffff;
+    }
+
+    .dark-mode textarea {
+      background-color: #2c2c2c;
+      color: white;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: auto;
+      padding: 24px;
+    }
+
+    .mdl-card {
+      padding: 24px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      font-family: monospace;
+      border: none;
+      border-radius: 4px;
+      resize: vertical;
+      background-color: #f0f0f0;
+    }
+
+    .button-group {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    #copy-message {
+      margin-top: 10px;
+      color: #4caf50;
+      font-weight: bold;
+      display: none;
+    }
+
+    /* Smartphone Modus */
+    .smartphone textarea {
+      font-size: 18px;
+    }
+
+    .smartphone .mdl-card {
+      width: 100%;
+      padding: 16px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .top-bar .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <h4 style="margin: 0;">🔐 Verschlüsselungskette</h4>
+    <div class="right-controls">
+      <!-- Dark Mode Toggle -->
+      <button class="mdl-button mdl-js-button mdl-button--icon" onclick="toggleDarkMode()" title="Dark Mode">
+        <i id="darkIcon" class="material-icons">dark_mode</i>
+      </button>
+
+      <!-- Smartphone-Modus -->
+      <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="smartToggle" title="Smartphone-Modus aktivieren">
+        <input type="checkbox" id="smartToggle" class="mdl-switch__input" onchange="toggleSmartMode()">
+        <span class="mdl-switch__label">📱</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="container mdl-card mdl-shadow--4dp" id="mainCard">
+    <label for="input">Eingabe:</label>
+    <textarea id="input" rows="4" placeholder="Text hier eingeben..."></textarea>
+
+    <div class="button-group">
+      <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="encrypt()">
+        🔒 Verschlüsseln
+      </button>
+      <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent" onclick="decrypt()">
+        🔓 Entschlüsseln
+      </button>
+    </div>
+
+    <hr style="margin: 30px 0;">
+
+    <label for="output">Ergebnis:</label>
+    <textarea id="output" rows="4" readonly></textarea>
+
+    <div class="button-group">
+      <button class="mdl-button mdl-js-button mdl-button--raised" onclick="copyOutput()">
+        📋 Kopieren
+      </button>
+    </div>
+
+    <div id="copy-message">✅ Ergebnis kopiert!</div>
+  </div>
+
+  <script>
+    const aesKey = "32b086b6181451359cdc9676e1c9af05a26e7de300559849f1b33caa7b92513c";
+    const blowfishKey = "64885a419161ded6f3b1b2d98632fa553bcb2108fa44124b89ce4162bf283801";
+  
+    function caesarEncrypt(text, shift = 3) {
+      return text.split('').map(c => String.fromCharCode(c.charCodeAt(0) + shift)).join('');
+    }
+  
+    function caesarDecrypt(text, shift = 3) {
+      return text.split('').map(c => String.fromCharCode(c.charCodeAt(0) - shift)).join('');
+    }
+  
+    function asciiConvert(text) {
+      return text.split('').map(c => c.charCodeAt(0)).join(',');
+    }
+  
+    function asciiRestore(asciiStr) {
+      return asciiStr.split(',').map(num => String.fromCharCode(Number(num))).join('');
+    }
+  
+    function base64Encode(text) {
+      return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(text));
+    }
+  
+    function base64Decode(base64) {
+      return CryptoJS.enc.Base64.parse(base64).toString(CryptoJS.enc.Utf8);
+    }
+  
+    function aesEncrypt(text, key) {
+      return CryptoJS.AES.encrypt(text, key).toString();
+    }
+  
+    function aesDecrypt(cipher, key) {
+      return CryptoJS.AES.decrypt(cipher, key).toString(CryptoJS.enc.Utf8);
+    }
+  
+    function blowfishEncrypt(text, key) {
+      return CryptoJS.Blowfish.encrypt(text, key).toString();
+    }
+  
+    function blowfishDecrypt(cipher, key) {
+      return CryptoJS.Blowfish.decrypt(cipher, key).toString(CryptoJS.enc.Utf8);
+    }
+  
+    function encrypt() {
+      const input = document.getElementById('input').value;
+  
+      const step1 = caesarEncrypt(input);
+      const step2 = asciiConvert(step1);
+      const step3 = base64Encode(step2);
+      const step4 = aesEncrypt(step3, aesKey);
+      const step5 = blowfishEncrypt(step4, blowfishKey);
+      const step6 = base64Encode(step5);
+      const step7 = blowfishEncrypt(step6, blowfishKey);
+      const final = base64Encode(step7);
+  
+      document.getElementById('output').value = final;
+      copyOutput();
+    }
+  
+    function decrypt() {
+      try {
+        const input = document.getElementById('input').value;
+  
+        const step1 = base64Decode(input);
+        const step2 = blowfishDecrypt(step1, blowfishKey);
+        const step3 = base64Decode(step2);
+        const step4 = blowfishDecrypt(step3, blowfishKey);
+        const step5 = aesDecrypt(step4, aesKey);
+        const step6 = base64Decode(step5);
+        const step7 = asciiRestore(step6);
+        const final = caesarDecrypt(step7);
+  
+        document.getElementById('output').value = final;
+        copyOutput();
+      } catch (e) {
+        console.error("Fehler bei der Entschlüsselung:", e);
+        document.getElementById('output').value = "❌ Entschlüsselung fehlgeschlagen";
+      }
+    }
+  
+    function copyOutput() {
+      const outputField = document.getElementById('output');
+      outputField.select();
+      outputField.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+  
+      const msg = document.getElementById('copy-message');
+      msg.style.display = 'block';
+      setTimeout(() => {
+        msg.style.display = 'none';
+      }, 2000);
+    }
+  
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const icon = document.getElementById('darkIcon');
+      icon.textContent = document.body.classList.contains('dark-mode') ? 'light_mode' : 'dark_mode';
+    }
+  
+    function toggleSmartMode() {
+      document.getElementById('mainCard').classList.toggle('smartphone');
+      document.body.classList.toggle('smartphone');
+    }
+  
+    // Aktiviert Smartphone-Modus standardmäßig
+    window.addEventListener('DOMContentLoaded', () => {
+      const checkbox = document.getElementById('smartToggle');
+      checkbox.checked = true;
+      toggleSmartMode();
+    });
+  </script>
+  
+</body>
+</html>
